@@ -6,20 +6,20 @@ import ChatMessage from "@/components/ChatMessage";
 import { useEffect, useState } from "react";
 
 export default function Chat() {
-	const [socket, setSocket] = useState<WebSocket>(
-		new WebSocket("ws://localhost:3002")
-	);
+	const [socket, setSocket] = useState<WebSocket>();
 	const [msg, setMsg] = useState<string>("");
-	const handleSendMessage = () => {
+	const handleSendMessage = () => {};
+
+	useEffect(() => {
+		const socket = new WebSocket("ws://localhost:3002");
+
 		socket.onopen = () => {
-			let msg = "Connection Established";
-			console.log(msg);
+			console.log("Connection Established");
 		};
-
-		socket.onmessage = (message) => {};
-	};
-
-	useEffect(() => {}, []);
+		socket.onmessage = (message) => {
+			setMsg(message.data);
+		};
+	}, []);
 
 	if (!socket) {
 		return (
@@ -31,7 +31,7 @@ export default function Chat() {
 	return (
 		<>
 			<ChatHeader />
-			<ChatMessage />
+			<ChatMessage message={msg} sender={} />
 			<ChatInput onSendMessage={handleSendMessage} />
 		</>
 	);

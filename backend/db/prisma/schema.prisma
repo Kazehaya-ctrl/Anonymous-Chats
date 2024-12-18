@@ -14,7 +14,7 @@ datasource db {
 }
 
 model User {
-  id  DateTime @unique
+  id  Int @unique
   messages Message[]
 }
 
@@ -22,6 +22,6 @@ model Message {
   id Int  @unique @default(autoincrement())
   createdAt DateTime
   content String
-  userId  DateTime
+  userId  Int
   User  User @relation(fields: [userId], references: [id])
 }
