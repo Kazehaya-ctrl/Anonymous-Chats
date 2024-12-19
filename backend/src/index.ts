@@ -13,11 +13,13 @@ wss.on("connection", (ws) => {
 		console.log("Error" + error);
 	});
 	ws.on("message", async (data, isBinary) => {
+		const message = data.toString();
+		const jsonData = JSON.parse(message);
 		await prisma.message.create({
 			data: {
 				createdAt: new Date(),
-				content: data,
-				userId: data,
+				content: jsonData.message,
+				userId: jsonData.id,
 			},
 		});
 		wss.clients.forEach((client) => {
@@ -26,10 +28,9 @@ wss.on("connection", (ws) => {
 			}
 		});
 	});
-	ws.send("Connection Established");
 });
 
-app.get("/join", async (req: Request, res: Response) => {
+app.post("/join", async (req: Request, res: Response) => {
 	try {
 		const user = await prisma.user.create({
 			data: {
@@ -38,6 +39,7 @@ app.get("/join", async (req: Request, res: Response) => {
 		});
 		res.status(200).json({
 			msg: "Success",
+			user,
 		});
 	} catch (e) {
 		console.log("Error" + e);
@@ -45,7 +47,7 @@ app.get("/join", async (req: Request, res: Response) => {
 	}
 });
 
-app.post("/messages", async (req: Request, res: Response) => {
+app.get("/messages", async (req: Request, res: Response) => {
 	try {
 		const message = await prisma.message.findMany();
 		res.status(200).json({ message, msg: "Success" });
