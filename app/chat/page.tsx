@@ -7,8 +7,7 @@ import { useEffect, useState } from "react";
 
 export default function Chat() {
 	const [socket, setSocket] = useState<WebSocket>();
-	const [msg, setMsg] = useState<string>("");
-	const [allMessage, setallMessage] = useState<Array<string>>([]);
+	const [allMessage, setallMessage] = useState<Array<object>>([]);
 
 	const handleSendMessage = async (message: string) => {
 		const id = localStorage.getItem("userId");
@@ -25,13 +24,20 @@ export default function Chat() {
 	};
 
 	useEffect(() => {
+		const fetchAllmsg = async () => {
+			const msgs = await fetch("http://localhost:3002/messages");
+			const repsonse = await msgs.json();
+			setallMessage(repsonse);
+		};
+
+		fetchAllmsg();
+	}, []);
+
+	useEffect(() => {
 		const socket = new WebSocket("ws://localhost:3002");
 
 		socket.onopen = () => {
 			console.log("Connection Established");
-		};
-		socket.onmessage = (message) => {
-			setMsg(message.data);
 		};
 
 		return () => {
@@ -49,7 +55,13 @@ export default function Chat() {
 	return (
 		<>
 			<ChatHeader />
-			<ChatMessage />
+			{allMessage.map((element: any) => {
+				return (
+					<div key={element.id}>
+						<ChatMessage message={element.message} />
+					</div>
+				);
+			})}
 			<ChatInput onSendMessage={(message) => handleSendMessage(message)} />
 		</>
 	);
