@@ -39,7 +39,7 @@ export default function Chat() {
 		socket.onopen = () => {
 			console.log("Connection Established");
 		};
-
+		setSocket(socket);
 		return () => {
 			socket.close();
 		};
