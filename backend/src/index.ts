@@ -1,8 +1,10 @@
 import WebSocket, { WebSocketServer } from "ws";
 import express, { Request, Response } from "express";
 import prisma from "./db";
+import cors from "cors"
 
 const app = express();
+app.use(cors())
 const server = app.listen(3002, () => {
 	console.log(new Date() + " Running on port 3002");
 });
@@ -34,14 +36,18 @@ app.post("/join", async (req: Request, res: Response) => {
 	try {
 		const user = await prisma.user.create({
 			data: {
-				id: Date.now(),
+				id: BigInt(Date.now()),
 			},
 		});
+    if(user) {
 		res.status(200).json({
 			msg: "Success",
 			user,
-		});
-	} catch (e) {
+    }) 
+	  } else {
+      res.status(400).json({msg: "User not made"})
+    }
+  } catch (e) {
 		console.log("Error" + e);
 		res.status(400).json({ msg: "Failed" });
 	}

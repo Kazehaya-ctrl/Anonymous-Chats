@@ -13,12 +13,18 @@ export default function Home() {
 					</h1>
 					<button
 						onClick={async () => {
-							const user = await fetch("ws://localhost:3000/join", {
+							const user = await fetch("http://localhost:3002/join", {
 								method: "POST",
-								headers: { "Content-Type": "Application/jsons" },
+								headers: { "Content-Type": "Application/json" },
 							});
 							const response = await user.json();
-							localStorage.setItem("userId", response.data.user.id);
+              console.log(response)
+              if(response){
+							  localStorage.setItem("userId", response.user.id);
+                router.push("/chat")
+              } else {
+              console.log('Response not found')
+              }
 						}}
 						className="px-8 py-4 text-white font-semibold text-xl bg-purple-600 hover:bg-purple-700 rounded-lg shadow-lg transition duration-300"
 					>
