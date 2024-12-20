@@ -1,10 +1,10 @@
 import WebSocket, { WebSocketServer } from "ws";
 import express, { Request, Response } from "express";
 import prisma from "./db";
-import cors from "cors"
+import cors from "cors";
 
 const app = express();
-app.use(cors())
+app.use(cors());
 const server = app.listen(3002, () => {
 	console.log(new Date() + " Running on port 3002");
 });
@@ -39,15 +39,19 @@ app.post("/join", async (req: Request, res: Response) => {
 				id: BigInt(Date.now()),
 			},
 		});
-    if(user) {
-		res.status(200).json({
-			msg: "Success",
-			user,
-    }) 
-	  } else {
-      res.status(400).json({msg: "User not made"})
-    }
-  } catch (e) {
+		if (user) {
+			const userResponse = {
+				...user,
+				id: user.id.toString(),
+			};
+			res.status(200).json({
+				msg: "Success",
+				user: userResponse,
+			});
+		} else {
+			res.status(400).json({ msg: "User not made" });
+		}
+	} catch (e) {
 		console.log("Error" + e);
 		res.status(400).json({ msg: "Failed" });
 	}
@@ -55,7 +59,7 @@ app.post("/join", async (req: Request, res: Response) => {
 
 app.get("/messages", async (req: Request, res: Response) => {
 	try {
-		const message = await prisma.message.findMany();
+		const message = await prisma.message.findMany({});
 		res.status(200).json({ message, msg: "Success" });
 	} catch (e) {
 		console.log("Error" + e);

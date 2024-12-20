@@ -5,9 +5,16 @@ import ChatInput from "@/components/ChatInput";
 import ChatMessage from "@/components/ChatMessage";
 import { useEffect, useState } from "react";
 
+interface messageSchema {
+	id: number;
+	createdAt: Date;
+	content: string;
+	userId: number;
+}
+
 export default function Chat() {
 	const [socket, setSocket] = useState<WebSocket>();
-	const [allMessage, setallMessage] = useState<Array<object>>([]);
+	const [allMessage, setallMessage] = useState<messageSchema[]>([]);
 
 	const handleSendMessage = async (message: string) => {
 		const id = localStorage.getItem("userId");
@@ -26,8 +33,13 @@ export default function Chat() {
 	useEffect(() => {
 		const fetchAllmsg = async () => {
 			const msgs = await fetch("http://localhost:3002/messages");
-			const repsonse = await msgs.json();
-			setallMessage(repsonse);
+			if (msgs.ok) {
+				const repsonse = await msgs.json();
+				console.log(repsonse);
+				setallMessage(repsonse.message);
+			} else {
+				console.log("Error");
+			}
 		};
 
 		fetchAllmsg();
