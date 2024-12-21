@@ -3,14 +3,13 @@ import { Users, Phone, Video } from "lucide-react";
 
 export default function ChatHeader() {
 	return (
-		<div className="flex items-center justify-between p-4 border-b bg-white">
+		<div className="flex items-center justify-between text-black p-4 border-b bg-white">
 			<div className="flex items-center space-x-4">
 				<div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-400 to-blue-600 flex items-center justify-center">
 					<Users className="w-6 h-6 text-white" />
 				</div>
 				<div>
 					<h2 className="text-lg font-semibold">Team Chat</h2>
-					<p className="text-sm text-gray-500">5 members • 2 online</p>
 				</div>
 			</div>
 			<div className="flex space-x-2">

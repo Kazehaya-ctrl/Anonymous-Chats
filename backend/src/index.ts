@@ -36,7 +36,7 @@ app.post("/join", async (req: Request, res: Response) => {
 	try {
 		const user = await prisma.user.create({
 			data: {
-				id: BigInt(Date.now()),
+				id: toString(Date.now()),
 			},
 		});
 		if (user) {
@@ -59,8 +59,10 @@ app.post("/join", async (req: Request, res: Response) => {
 
 app.get("/messages", async (req: Request, res: Response) => {
 	try {
+    console.log("ok")
 		const message = await prisma.message.findMany({});
-		res.status(200).json({ message, msg: "Success" });
+    console.log("ok", message)
+		res.status(200).json({msg: "Success", messages : message });
 	} catch (e) {
 		console.log("Error" + e);
 		res.status(400).json({ msg: "Failed" });
