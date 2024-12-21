@@ -36,14 +36,14 @@ export default function Chat() {
 			if (msgs.ok) {
 				const repsonse = await msgs.json();
 				console.log(repsonse);
-				setallMessage(repsonse.message);
+				setallMessage(repsonse.messages);
 			} else {
 				console.log("Error");
 			}
 		};
 
 		fetchAllmsg();
-	}, []);
+	}, [handleSendMessage]);
 
 	useEffect(() => {
 		const socket = new WebSocket("ws://localhost:3002");
@@ -70,7 +70,7 @@ export default function Chat() {
 			{allMessage.map((element: any) => {
 				return (
 					<div key={element.id}>
-						<ChatMessage message={element.message} />
+						<ChatMessage message={element.content} />
 					</div>
 				);
 			})}

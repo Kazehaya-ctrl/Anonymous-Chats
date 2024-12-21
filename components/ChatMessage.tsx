@@ -14,7 +14,7 @@ export default function ChatMessage({
 }: ChatMessageProps) {
 	return (
 		<div className="flex items-center justify-start p-4">
-			<div className="bg-blue-500 text-white p-3 rounded-lg max-w-xs">
+			<div className="bg-blue-500 text-black p-3 rounded-lg max-w-xs">
 				{message}
 			</div>
 		</div>
