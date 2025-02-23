@@ -9,28 +9,69 @@ const server = app.listen(3002, () => {
 	console.log(new Date() + " Running on port 3002");
 });
 const wss = new WebSocketServer({ server });
+let wsClients = new Map<WebSocket, string>()
 
 wss.on("connection", (ws) => {
-	ws.on("error", (error) => {
-		console.log("Error" + error);
-	});
-	ws.on("message", async (data, isBinary) => {
-		const message = data.toString();
-		const jsonData = JSON.parse(message);
-		await prisma.message.create({
-			data: {
-				createdAt: new Date(),
-				content: jsonData.message,
-				userId: jsonData.id,
-			},
-		});
-		wss.clients.forEach((client) => {
-			if (client.readyState === WebSocket.OPEN) {
-				client.send(data, { binary: isBinary });
-			}
-		});
-	});
-});
+	
+	ws.on('error', (error) => {
+		console.log("Error:", error)
+	})
+	
+	console.log("Helo world", ws)
+	const time = Date.now()
+	wsClients.set(ws, time.toString())
+	console.log(`Client connected: `, wsClients.get(ws))
+	
+	
+	ws.on('message', async (message) => {
+		const data = message.toString()
+		const jsonMessage = JSON.parse(data)
+		console.log(jsonMessage)
+	})
+
+	ws.on('close', () => {
+		console.log('Disconneted clients: ', wsClients.get(ws))
+		wsClients.delete(ws)
+	})
+})
+
+// wss.on("connection", (ws) => {
+// 	ws.on("error", (error) => {
+// 		console.log("Error" + error);
+// 	});
+
+// 	ws.on("message", async (data, isBinary) => {
+// 		const message = data.toString();
+// 		const jsonData = JSON.parse(message);
+
+// 		if(!wsClients.has(ws)) {
+// 			wsClients.set(ws, jsonData.id)
+// 		}
+// 		await prisma.message.create({
+// 			data: {
+// 				createdAt: new Date(),
+// 				content: jsonData.message,
+// 				userId: jsonData.id,
+// 			},
+// 		});
+// 		wss.clients.forEach((client) => {
+// 			if (client.readyState === WebSocket.OPEN) {
+// 				client.send(data, { binary: isBinary });
+// 			}
+// 		});
+// 	});
+
+// 	ws.on("close", async () => {
+// 		console.log('Client Disconnected')
+// 		const deleteUser = await prisma.user.delete({
+// 			where: {
+// 				id: wsClients.get(ws)
+// 			}
+// 		}) 
+
+// 		wsClients.delete(ws)
+// 	})
+// });
 
 app.post("/join", async (req: Request, res: Response) => {
 	try {
@@ -59,9 +100,9 @@ app.post("/join", async (req: Request, res: Response) => {
 
 app.get("/messages", async (req: Request, res: Response) => {
 	try {
-		console.log("ok");
+		// console.log("ok");
 		const message = await prisma.message.findMany({});
-		console.log("ok", message);
+		// console.log("ok", message);
 		res.status(200).json({ msg: "Success", messages: message });
 	} catch (e) {
 		console.log("Error" + e);
