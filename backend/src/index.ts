@@ -3,6 +3,11 @@ import express, { Request, Response } from "express";
 import prisma from "./db";
 import cors from "cors";
 
+interface chatSchema {
+	id: string,
+	msg: string
+}
+
 const app = express();
 app.use(cors());
 const server = app.listen(3002, () => {
@@ -12,21 +17,43 @@ const wss = new WebSocketServer({ server });
 let wsClients = new Map<WebSocket, string>()
 
 wss.on("connection", (ws) => {
-	
+	if(!wsClients.has(ws)) {
+		const time = Date.now()
+		wsClients.set(ws, time.toString())
+	}
+
 	ws.on('error', (error) => {
 		console.log("Error:", error)
 	})
 	
 	console.log("Helo world", ws)
-	const time = Date.now()
-	wsClients.set(ws, time.toString())
+	console.log(wsClients)
+
 	console.log(`Client connected: `, wsClients.get(ws))
 	
 	
 	ws.on('message', async (message) => {
-		const data = message.toString()
-		const jsonMessage = JSON.parse(data)
-		console.log(jsonMessage)
+		try {
+			const data = message.toString()
+			const jsonMessage = JSON.parse(data) as chatSchema
+
+			if (jsonMessage) {
+				const post_messages = await prisma.message.create({
+					data: {
+						content: jsonMessage.msg,
+						userId: jsonMessage.id,
+						createdAt: 
+					}
+				})
+				wsClients.forEach((_, webskt) => {
+					webskt.send(message)
+				})
+			}
+			console.log(message)
+
+		} catch (e) {
+			console.log('Invalid msg', e)
+		}
 	})
 
 	ws.on('close', () => {

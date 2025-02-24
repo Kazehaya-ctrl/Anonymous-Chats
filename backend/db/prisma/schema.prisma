@@ -10,18 +10,18 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url = env("DATABASE_URL") 
+  url      = env("DATABASE_URL")
 }
 
 model User {
-  id String @unique
+  id       String    @unique
   messages Message[]
 }
 
 model Message {
-  id Int  @unique @default(autoincrement())
-  createdAt DateTime
-  content String
-  userId String 
-  User  User @relation(fields: [userId], references: [id])
+  id        Int      @unique @default(autoincrement())
+  createdAt DateTime @default(now())
+  content   String
+  userId    String
+  User      User     @relation(fields: [userId], references: [id])
 }
