@@ -2,10 +2,14 @@ import WebSocket, { WebSocketServer } from "ws";
 import express, { Request, Response } from "express";
 import prisma from "./db";
 import cors from "cors";
+import dotenv from "dotenv";
+dotenv.config();
 
 interface chatSchema {
-	id: string,
-	msg: string
+	id?: string;
+	content: string;
+	userId: string;
+	createdAt?: string;
 }
 
 const app = express();
@@ -14,53 +18,54 @@ const server = app.listen(3002, () => {
 	console.log(new Date() + " Running on port 3002");
 });
 const wss = new WebSocketServer({ server });
-let wsClients = new Map<WebSocket, string>()
+let wsClients = new Map<WebSocket, string>();
 
 wss.on("connection", (ws) => {
-	if(!wsClients.has(ws)) {
-		const time = Date.now()
-		wsClients.set(ws, time.toString())
+	if (!wsClients.has(ws)) {
+		const time = Date.now();
+		wsClients.set(ws, time.toString());
 	}
 
-	ws.on('error', (error) => {
-		console.log("Error:", error)
-	})
-	
-	console.log("Helo world", ws)
-	console.log(wsClients)
+	ws.on("error", (error) => {
+		console.log("Error:", error);
+	});
 
-	console.log(`Client connected: `, wsClients.get(ws))
-	
-	
-	ws.on('message', async (message) => {
+	console.log("Helo world", ws);
+	console.log(wsClients.size);
+
+	console.log(`Client connected: `, wsClients.get(ws));
+
+	ws.on("message", async (message) => {
 		try {
-			const data = message.toString()
-			const jsonMessage = JSON.parse(data) as chatSchema
+			const data = message.toString();
+			const jsonMessage = JSON.parse(data) as chatSchema;
 
 			if (jsonMessage) {
 				const post_messages = await prisma.message.create({
 					data: {
-						content: jsonMessage.msg,
-						userId: jsonMessage.id,
-						createdAt: 
-					}
-				})
-				wsClients.forEach((_, webskt) => {
-					webskt.send(message)
-				})
+						content: jsonMessage.content,
+						userId: jsonMessage.userId,
+					},
+				});
+				if (post_messages) {
+					const parsed_data = JSON.stringify(post_messages);
+					wsClients.forEach((_, webskt) => {
+						webskt.send(parsed_data);
+					});
+				}
 			}
-			console.log(message)
-
+			console.log(message);
 		} catch (e) {
-			console.log('Invalid msg', e)
+			console.log("Invalid msg", e);
 		}
-	})
+	});
 
-	ws.on('close', () => {
-		console.log('Disconneted clients: ', wsClients.get(ws))
-		wsClients.delete(ws)
-	})
-})
+	ws.on("close", () => {
+		console.log("Disconneted clients: ", wsClients.get(ws));
+		wsClients.delete(ws);
+		console.log(wsClients.size);
+	});
+});
 
 // wss.on("connection", (ws) => {
 // 	ws.on("error", (error) => {
@@ -94,7 +99,7 @@ wss.on("connection", (ws) => {
 // 			where: {
 // 				id: wsClients.get(ws)
 // 			}
-// 		}) 
+// 		})
 
 // 		wsClients.delete(ws)
 // 	})
