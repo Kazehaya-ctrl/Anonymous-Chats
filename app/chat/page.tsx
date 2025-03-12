@@ -3,32 +3,43 @@ import React, { useCallback, useEffect, useState, useRef } from "react";
 import { AiOutlineSend } from "react-icons/ai";
 import { motion } from "framer-motion";
 
-export interface chatSchema {
-	id?: string;
+interface msgTosendSchema {
 	content: string;
-	createdAt?: Date;
 	userId: string;
-	type?: string;
+}
+
+interface messageSchema {
+	content: string;
+	time: string;
+	type: "sent" | "recieved";
 }
 
 const ChatUI = () => {
-	const [messages, setMessages] = useState<Array<chatSchema>>([]);
+	const [messages, setMessages] = useState<Array<messageSchema>>([]);
 	const [incomingMessage, setIncomingMessage] = useState(0);
 	const [input, setInput] = useState("");
 	const [socket, setSocket] = useState<WebSocket | null>(null);
 
-	// Create ref for message container
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 
-	// Function to scroll to bottom
 	const scrollToBottom = () => {
 		messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
 	};
 
-	// Add effect to scroll when messages change
 	useEffect(() => {
 		scrollToBottom();
 	}, [messages, setMessages]);
+
+	useEffect(() => {
+		const fetch_messages = async () => {
+			const stored_msg = await fetch("http://localhost:3002/messages");
+			const msg_response = await stored_msg.json() as Array<messageSchema>;
+
+			setMessages(msg_response);
+		};
+
+		fetch_messages();
+	}, []);
 
 	useEffect(() => {
 		const socket_connection = new WebSocket("ws://localhost:3002");
@@ -57,6 +68,7 @@ const ChatUI = () => {
 			userId: user_id,
 			content: input,
 			type: "sent",
+			createdAt: new Date().toLocaleTimeString(),
 		};
 
 		socket?.send(
@@ -72,34 +84,7 @@ const ChatUI = () => {
 		setInput("");
 	};
 
-	useEffect(() => {
-		const fetch_messages = async () => {
-			const stored_msg = await fetch("http://localhost:3002/messages");
-			const msg_response = await stored_msg.json();
-			if (msg_response.length === 0) {
-				return;
-			}
-			const messageResponse = msg_response.messages.map(
-				(msg: chatSchema) => {
-					// Create a new object with all existing properties
-					return {
-						...msg,
-						// Add type property based on userId
-						type:
-							msg.userId === localStorage.getItem("clientId")
-								? "sent"
-								: "received",
-					};
-				}
-			);
-			setMessages(messageResponse);
-			console.log(msg_response);
-		};
-
-		fetch_messages();
-	}, [incomingMessage]);
-
-	const renderMessage = (message: chatSchema) => (
+	const renderMessage = (message: msgSchema) => (
 		<motion.div
 			key={message.id}
 			initial={{ opacity: 0, y: 10, rotate: 2 }}

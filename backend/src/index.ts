@@ -12,6 +12,11 @@ interface chatSchema {
 	createdAt?: string;
 }
 
+interface websocketMessage {
+	userId: string;
+	content: string;
+}
+
 const app = express();
 app.use(cors());
 const server = app.listen(3002, () => {
@@ -30,104 +35,66 @@ wss.on("connection", (ws) => {
 		console.log("Error:", error);
 	});
 
-	console.log("Helo world", ws);
 	console.log(wsClients.size);
 
 	console.log(`Client connected: `, wsClients.get(ws));
 
 	ws.on("message", async (message) => {
-		try {
-			const data = message.toString();
-			const jsonMessage = JSON.parse(data) as chatSchema;
+		const data = message.toString();
+		if (!data) {
+			throw new Error("Empty message received");
+		}
+		const parsed_data = JSON.parse(data) as websocketMessage;
 
-			if (jsonMessage) {
-				const post_messages = await prisma.message.create({
+		if (!parsed_data.userId || !parsed_data.content) {
+			throw new Error("Invalid message format");
+		}
+		console.log(parsed_data);
+
+		try {
+			const createUser = await prisma.user.create({
+				data: {
+					id: wsClients.get(ws)!,
+				},
+			});
+			if (createUser) {
+				const createMesage = await prisma.message.create({
 					data: {
-						content: jsonMessage.content,
-						userId: jsonMessage.userId,
+						content: parsed_data.content,
+						userId: parsed_data.userId,
 					},
 				});
-				if (post_messages) {
-					const parsed_data = JSON.stringify(post_messages);
-					wsClients.forEach((_, webskt) => {
-						webskt.send(parsed_data);
+
+				if (createMesage) {
+					wsClients.forEach((id, client) => {
+						if (client.readyState === WebSocket.OPEN) {
+							client.send(data);
+						}
 					});
 				}
 			}
-			console.log(message);
-		} catch (e) {
-			console.log("Invalid msg", e);
+		} catch (err) {
+			console.log("Error: ", err);
+			throw new Error("Failed to create user");
 		}
 	});
 
-	ws.on("close", () => {
+	ws.on("close", async () => {
 		console.log("Disconneted clients: ", wsClients.get(ws));
+
+		try {
+			await prisma.user.delete({
+				where: {
+					id: wsClients.get(ws),
+				},
+			});
+		} catch (err) {
+			console.log("Error: ", err);
+		}
+
 		wsClients.delete(ws);
 		console.log(wsClients.size);
 	});
-});
-
-// wss.on("connection", (ws) => {
-// 	ws.on("error", (error) => {
-// 		console.log("Error" + error);
-// 	});
-
-// 	ws.on("message", async (data, isBinary) => {
-// 		const message = data.toString();
-// 		const jsonData = JSON.parse(message);
-
-// 		if(!wsClients.has(ws)) {
-// 			wsClients.set(ws, jsonData.id)
-// 		}
-// 		await prisma.message.create({
-// 			data: {
-// 				createdAt: new Date(),
-// 				content: jsonData.message,
-// 				userId: jsonData.id,
-// 			},
-// 		});
-// 		wss.clients.forEach((client) => {
-// 			if (client.readyState === WebSocket.OPEN) {
-// 				client.send(data, { binary: isBinary });
-// 			}
-// 		});
-// 	});
-
-// 	ws.on("close", async () => {
-// 		console.log('Client Disconnected')
-// 		const deleteUser = await prisma.user.delete({
-// 			where: {
-// 				id: wsClients.get(ws)
-// 			}
-// 		})
-
-// 		wsClients.delete(ws)
-// 	})
-// });
-
-app.post("/join", async (req: Request, res: Response) => {
-	try {
-		const user = await prisma.user.create({
-			data: {
-				id: String(Date.now()),
-			},
-		});
-		if (user) {
-			const userResponse = {
-				...user,
-				id: user.id.toString(),
-			};
-			res.status(200).json({
-				msg: "Success",
-				user: userResponse,
-			});
-		} else {
-			res.status(400).json({ msg: "User not made" });
-		}
-	} catch (e) {
-		console.log("Error" + e);
-		res.status(400).json({ msg: "Failed" });
-	}
 });
 
 app.get("/messages", async (req: Request, res: Response) => {

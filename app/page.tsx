@@ -27,24 +27,7 @@ export default function Home() {
 					Chat Anonymously!!!
 				</h1>
 				<motion.button
-					onClick={async () => {
-						const user_join = await fetch(
-							"http://localhost:3002/join",
-							{
-								method: "POST",
-							}
-						);
-						const response_user = await user_join.json();
-						if (response_user.msg === "Success") {
-							localStorage.setItem(
-								"clientId",
-								response_user.user.id
-							);
-							route.push("/chat");
-						} else {
-							alert("User not created");
-						}
-					}}
+					onClick={() => route.push("/chat")}
 					className="px-10 py-4 text-white font-semibold text-xl bg-purple-700 hover:bg-purple-900 rounded-xl shadow-2xl transition duration-150 transform hover:scale-105 active:scale-95 backdrop-blur-lg bg-opacity-80"
 					whileHover={{ scale: 1.1 }}
 					whileTap={{ scale: 0.9 }}
