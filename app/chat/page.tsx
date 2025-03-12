@@ -33,7 +33,8 @@ const ChatUI = () => {
 	useEffect(() => {
 		const fetch_messages = async () => {
 			const stored_msg = await fetch("http://localhost:3002/messages");
-			const msg_response = await stored_msg.json() as Array<messageSchema>;
+			const msg_response =
+				(await stored_msg.json()) as Array<messageSchema>;
 
 			setMessages(msg_response);
 		};
@@ -46,10 +47,12 @@ const ChatUI = () => {
 
 		socket_connection.onmessage = async (response) => {
 			const text_response = await response.data.text();
-			setIncomingMessage((prev) => prev + 1);
 			const parsed_data = JSON.parse(text_response);
-			console.log(parsed_data);
-			setMessages((prev) => [...prev, parsed_data]);
+			if (parsed_data.type === "saveUserId") {
+				localStorage.setItem("clientId", parsed_data.userId.toString());
+			} else if (parsed_data.type === "message") {
+				setMessages((prev) => [...prev, parsed_data.newMessage]);
+			}
 		};
 		setSocket(socket_connection);
 
@@ -59,34 +62,26 @@ const ChatUI = () => {
 	}, []);
 
 	const sendMessage = () => {
-		const user_id = localStorage.getItem("clientId");
-		if (user_id === null) {
-			alert("User not created");
-			return;
-		}
-		const data_to_sent = {
-			userId: user_id,
+		const message: msgTosendSchema = {
 			content: input,
-			type: "sent",
-			createdAt: new Date().toLocaleTimeString(),
+			userId: localStorage.getItem("clientId") || "",
 		};
 
-		socket?.send(
-			JSON.stringify({
-				userId: user_id,
+		socket?.send(JSON.stringify(message));
+		setMessages((prev) => [
+			...prev,
+			{
 				content: input,
-			})
-		);
-
-		setMessages((prev) =>
-			prev ? [...prev, data_to_sent] : [data_to_sent]
-		);
+				time: new Date().toLocaleTimeString(),
+				type: "sent",
+			},
+		]);
 		setInput("");
 	};
 
-	const renderMessage = (message: msgSchema) => (
+	const renderMessage = (message: messageSchema, index: any) => (
 		<motion.div
-			key={message.id}
+			key={index}
 			initial={{ opacity: 0, y: 10, rotate: 2 }}
 			animate={{ opacity: 1, y: 0, rotate: 0 }}
 			transition={{ duration: 0.3, ease: "easeInOut" }}
@@ -94,7 +89,7 @@ const ChatUI = () => {
 				message.type === "sent" ? "justify-end" : "justify-start"
 			}`}
 		>
-			{message.type === "received" && (
+			{message.type === "recieved" && (
 				<div className="w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center mr-2">
 					<span className="text-white font-bold">U</span>
 				</div>
@@ -115,7 +110,7 @@ const ChatUI = () => {
 							: "text-gray-300"
 					}`}
 				>
-					{new Date(message.createdAt!).toLocaleTimeString()}
+					{message.time}
 				</div>
 			</div>
 		</motion.div>
@@ -127,8 +122,9 @@ const ChatUI = () => {
 				className="flex-1 overflow-y-auto p-4"
 				style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
 			>
-				{messages?.map((message) => renderMessage(message))}
-				{/* Invisible div to scroll to */}
+				{messages?.map((message, index) =>
+					renderMessage(message, index)
+				)}
 				<div ref={messagesEndRef} />
 			</div>
 			<div className="bg-black border-t border-gray-700 p-3 flex items-center">

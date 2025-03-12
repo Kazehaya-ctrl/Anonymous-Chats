@@ -5,13 +5,6 @@ import cors from "cors";
 import dotenv from "dotenv";
 dotenv.config();
 
-interface chatSchema {
-	id?: string;
-	content: string;
-	userId: string;
-	createdAt?: string;
-}
-
 interface websocketMessage {
 	userId: string;
 	content: string;
@@ -25,83 +18,66 @@ const server = app.listen(3002, () => {
 const wss = new WebSocketServer({ server });
 let wsClients = new Map<WebSocket, string>();
 
-wss.on("connection", (ws) => {
-	if (!wsClients.has(ws)) {
-		const time = Date.now();
-		wsClients.set(ws, time.toString());
-	}
+wss.on("connection", async (ws) => {
+	try {
+		const userId = Date.now().toString();
+		await prisma.user.create({
+			data: { id: userId },
+		});
+		wsClients.set(ws, userId);
 
-	ws.on("error", (error) => {
-		console.log("Error:", error);
-	});
+		console.log(`Client connected: ${userId}`);
+		ws.send(JSON.stringify({ type: "saveUserId", userId }));
 
-	console.log(wsClients.size);
+		ws.on("message", async (message) => {
+			try {
+				const data = message.toString();
+				if (!data) {
+					throw new Error("Empty message received");
+				}
 
-	console.log(`Client connected: `, wsClients.get(ws));
+				const parsed_data = JSON.parse(data) as websocketMessage;
+				if (!parsed_data.userId || !parsed_data.content) {
+					throw new Error("Invalid message format");
+				}
 
-	ws.on("message", async (message) => {
-		const data = message.toString();
-		if (!data) {
-			throw new Error("Empty message received");
-		}
-		const parsed_data = JSON.parse(data) as websocketMessage;
-
-		if (!parsed_data.userId || !parsed_data.content) {
-			throw new Error("Invalid message format");
-		}
-		console.log(parsed_data);
-
-		try {
-			const createUser = await prisma.user.create({
-				data: {
-					id: wsClients.get(ws)!,
-				},
-			});
-			if (createUser) {
-				const createMesage = await prisma.message.create({
+				const newMessage = await prisma.message.create({
 					data: {
 						content: parsed_data.content,
 						userId: parsed_data.userId,
 					},
 				});
 
-				if (createMesage) {
-					wsClients.forEach((id, client) => {
-						if (client.readyState === WebSocket.OPEN) {
-							client.send(data);
-						}
-					});
-				}
+				wss.clients.forEach((client) => {
+					if (client.readyState === WebSocket.OPEN) {
+						client.send(
+							JSON.stringify({ type: "message", newMessage })
+						);
+					}
+				});
+			} catch (error) {
+				console.error("Message handling error:", error);
+				ws.send(JSON.stringify({ error: "Failed to process message" }));
+				return;
 			}
-		} catch (err) {
-			console.log("Error: ", err);
-			throw new Error("Failed to create user");
-		}
-	});
+		});
 
-	ws.on("close", async () => {
-		console.log("Disconneted clients: ", wsClients.get(ws));
-
-		try {
-			await prisma.user.delete({
-				where: {
-					id: wsClients.get(ws),
-				},
-			});
-		} catch (err) {
-			console.log("Error: ", err);
-		}
-
-		wsClients.delete(ws);
-		console.log(wsClients.size);
-	});
+		ws.on("close", async () => {
+			const userId = wsClients.get(ws);
+			if (userId) {
+				await prisma.user.delete({ where: { id: userId } });
+				wsClients.delete(ws);
+			}
+		});
+	} catch (error) {
+		console.error("Connection error:", error);
+		ws.close();
+	}
 });
 
 app.get("/messages", async (req: Request, res: Response) => {
 	try {
-		// console.log("ok");
 		const message = await prisma.message.findMany({});
-		// console.log("ok", message);
 		res.status(200).json({ msg: "Success", messages: message });
 	} catch (e) {
 		console.log("Error" + e);
