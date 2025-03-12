@@ -18,6 +18,8 @@ const server = app.listen(3002, () => {
 const wss = new WebSocketServer({ server });
 let wsClients = new Map<WebSocket, string>();
 
+console.log(wsClients.size);
+
 wss.on("connection", async (ws) => {
 	try {
 		const userId = Date.now().toString();
@@ -67,6 +69,7 @@ wss.on("connection", async (ws) => {
 			if (userId) {
 				await prisma.user.delete({ where: { id: userId } });
 				wsClients.delete(ws);
+				console.log(`Client disconnected: ${userId}`);
 			}
 		});
 	} catch (error) {

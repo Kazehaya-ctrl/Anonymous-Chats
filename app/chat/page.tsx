@@ -16,7 +16,6 @@ interface messageSchema {
 
 const ChatUI = () => {
 	const [messages, setMessages] = useState<Array<messageSchema>>([]);
-	const [incomingMessage, setIncomingMessage] = useState(0);
 	const [input, setInput] = useState("");
 	const [socket, setSocket] = useState<WebSocket | null>(null);
 
@@ -33,25 +32,62 @@ const ChatUI = () => {
 	useEffect(() => {
 		const fetch_messages = async () => {
 			const stored_msg = await fetch("http://localhost:3002/messages");
-			const msg_response =
-				(await stored_msg.json()) as Array<messageSchema>;
+			const msg_response = await stored_msg.json();
 
-			setMessages(msg_response);
+			if (msg_response.msg === "Success") {
+				if (msg_response.messages.length > 0) {
+					msg_response.messages.forEach((message: any) => {
+						const messageSchema_content = message.content;
+						const messageSchema_time = message.createdAt;
+						const messageSchema_type =
+							message.userId === localStorage.getItem("clientId")
+								? "sent"
+								: "recieved";
+						setMessages((prev) => [
+							...prev,
+							{
+								content: messageSchema_content,
+								time: messageSchema_time,
+								type: messageSchema_type,
+							},
+						]);
+					});
+				} else if (msg_response.messages.length === 0) {
+					setMessages([]);
+				}
+			}
 		};
 
 		fetch_messages();
+
+		return () => {
+			socket?.close();
+		};
 	}, []);
 
 	useEffect(() => {
 		const socket_connection = new WebSocket("ws://localhost:3002");
 
 		socket_connection.onmessage = async (response) => {
-			const text_response = await response.data.text();
+			const text_response = await response.data;
 			const parsed_data = JSON.parse(text_response);
 			if (parsed_data.type === "saveUserId") {
 				localStorage.setItem("clientId", parsed_data.userId.toString());
 			} else if (parsed_data.type === "message") {
-				setMessages((prev) => [...prev, parsed_data.newMessage]);
+				if (parsed_data.newMessage && parsed_data.newMessage.content) {
+					setMessages((prev) => [
+						...prev,
+						{
+							content: parsed_data.newMessage.content,
+							time: new Date().toLocaleTimeString(),
+							type:
+								parsed_data.newMessage.userId ===
+								localStorage.getItem("clientId")
+									? "sent"
+									: "recieved",
+						},
+					]);
+				}
 			}
 		};
 		setSocket(socket_connection);
