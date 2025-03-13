@@ -72,6 +72,7 @@ const ChatUI = () => {
 			const text_response = await response.data;
 			const parsed_data = JSON.parse(text_response);
 			if (parsed_data.type === "saveUserId") {
+				localStorage.removeItem("clientId");
 				localStorage.setItem("clientId", parsed_data.userId.toString());
 			} else if (parsed_data.type === "message") {
 				if (parsed_data.newMessage && parsed_data.newMessage.content) {

@@ -51,7 +51,11 @@ wss.on("connection", async (ws) => {
 				});
 
 				wss.clients.forEach((client) => {
-					if (client.readyState === WebSocket.OPEN) {
+					const recipientId = wsClients.get(client);
+					if (
+						client.readyState === WebSocket.OPEN &&
+						recipientId !== parsed_data.userId
+					) {
 						client.send(
 							JSON.stringify({ type: "message", newMessage })
 						);
