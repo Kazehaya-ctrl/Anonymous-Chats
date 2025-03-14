@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 
 interface msgTosendSchema {
 	content: string;
-	userId: string;
+	id: string;
 }
 
 interface messageSchema {
@@ -19,7 +19,6 @@ const ChatUI = () => {
 	const [input, setInput] = useState("");
 	const [socket, setSocket] = useState<WebSocket | null>(null);
 	const [userId, setUserId] = useState<string | null>(null);
-
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 
 	const scrollToBottom = () => {
@@ -31,66 +30,59 @@ const ChatUI = () => {
 	}, [messages, setMessages]);
 
 	useEffect(() => {
-		const fetch_messages = async () => {
-			const stored_msg = await fetch("http://localhost:3002/messages");
-			const msg_response = await stored_msg.json();
+		const socket_connection = new WebSocket("ws://localhost:3002");
 
-			if (msg_response.msg === "Success") {
-				if (msg_response.messages.length > 0) {
-					msg_response.messages.forEach((message: any) => {
-						const messageSchema_content = message.content;
-						const messageSchema_time = message.createdAt;
-						const messageSchema_type =
-							message.userId === userId ? "sent" : "recieved";
-						setMessages((prev) => [
-							...prev,
-							{
-								content: messageSchema_content,
-								time: messageSchema_time,
-								type: messageSchema_type,
-							},
-						]);
-					});
-				} else if (msg_response.messages.length === 0) {
-					setMessages([]);
-				}
+		socket_connection.onmessage = (event) => {
+			const message = JSON.parse(event.data);
+			if (message.type === "saveUserId") {
+				setUserId(message.userId);
+			} else if (message.type === "message") {
+				setMessages((prev) => [
+					...prev,
+					{
+						content: message.newMessage.content,
+						time: message.newMessage.createdAt,
+						type:
+							message.newMessage.userId === userId
+								? "sent"
+								: "recieved",
+					},
+				]);
 			}
 		};
 
-		fetch_messages();
+		setSocket(socket_connection);
 
 		return () => {
-			socket?.close();
+			socket_connection.close();
 		};
-	}, [userId]);
+	}, []);
 
 	useEffect(() => {
-		// Only fetch messages after userId is set
-		if (!userId) return;
-
-		const fetch_messages = async () => {
-			const stored_msg = await fetch("http://localhost:3002/messages");
-			const msg_response = await stored_msg.json();
-
-			if (msg_response.msg === "Success") {
-				const formattedMessages = msg_response.messages.map(
-					(message: any) => ({
+		const fetchMessages = async () => {
+			const stored_messages = await fetch(
+				"http://localhost:3002/messages"
+			);
+			const response = await stored_messages.json();
+			response.messages.forEach((message: any) => {
+				setMessages((prev) => [
+					...prev,
+					{
 						content: message.content,
-						time: new Date(message.createdAt).toLocaleTimeString(),
+						time: message.time,
 						type: message.userId === userId ? "sent" : "recieved",
-					})
-				);
-				setMessages(formattedMessages); // Set all at once instead of incrementally
-			}
+					},
+				]);
+			});
 		};
 
-		fetch_messages();
-	}, [userId]); // Add userId as dependency
+		fetchMessages();
+	}, []);
 
 	const sendMessage = () => {
 		const message: msgTosendSchema = {
 			content: input,
-			userId: userId || "",
+			id: userId || "",
 		};
 
 		socket?.send(JSON.stringify(message));
@@ -143,7 +135,7 @@ const ChatUI = () => {
 	);
 
 	return (
-		<div className="h-screen w-screen flex flex-col bg-black bg-[radial-gradient(#5a5a5a_2px,transparent_2px)] bg-[size:20px_20px] text-white overflow-hidden">
+		<div className="h-screen w-screen flex flex-col items-center bg-black bg-[radial-gradient(#5a5a5a_2px,transparent_2px)] bg-[size:20px_20px] text-white overflow-hidden">
 			<div
 				className="flex-1 overflow-y-auto p-4"
 				style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
@@ -153,7 +145,7 @@ const ChatUI = () => {
 				)}
 				<div ref={messagesEndRef} />
 			</div>
-			<div className="bg-black border-t border-gray-700 p-3 flex items-center">
+			<div className="bg-black w-[90vh]  border-t border-gray-700 p-3 flex items-center">
 				<input
 					type="text"
 					placeholder="Type your message here..."
