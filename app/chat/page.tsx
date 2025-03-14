@@ -18,6 +18,7 @@ const ChatUI = () => {
 	const [messages, setMessages] = useState<Array<messageSchema>>([]);
 	const [input, setInput] = useState("");
 	const [socket, setSocket] = useState<WebSocket | null>(null);
+	const [userId, setUserId] = useState<string | null>(null);
 
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -40,9 +41,7 @@ const ChatUI = () => {
 						const messageSchema_content = message.content;
 						const messageSchema_time = message.createdAt;
 						const messageSchema_type =
-							message.userId === localStorage.getItem("clientId")
-								? "sent"
-								: "recieved";
+							message.userId === userId ? "sent" : "recieved";
 						setMessages((prev) => [
 							...prev,
 							{
@@ -63,45 +62,35 @@ const ChatUI = () => {
 		return () => {
 			socket?.close();
 		};
-	}, []);
+	}, [userId]);
 
 	useEffect(() => {
-		const socket_connection = new WebSocket("ws://localhost:3002");
+		// Only fetch messages after userId is set
+		if (!userId) return;
 
-		socket_connection.onmessage = async (response) => {
-			const text_response = await response.data;
-			const parsed_data = JSON.parse(text_response);
-			if (parsed_data.type === "saveUserId") {
-				localStorage.removeItem("clientId");
-				localStorage.setItem("clientId", parsed_data.userId.toString());
-			} else if (parsed_data.type === "message") {
-				if (parsed_data.newMessage && parsed_data.newMessage.content) {
-					setMessages((prev) => [
-						...prev,
-						{
-							content: parsed_data.newMessage.content,
-							time: new Date().toLocaleTimeString(),
-							type:
-								parsed_data.newMessage.userId ===
-								localStorage.getItem("clientId")
-									? "sent"
-									: "recieved",
-						},
-					]);
-				}
+		const fetch_messages = async () => {
+			const stored_msg = await fetch("http://localhost:3002/messages");
+			const msg_response = await stored_msg.json();
+
+			if (msg_response.msg === "Success") {
+				const formattedMessages = msg_response.messages.map(
+					(message: any) => ({
+						content: message.content,
+						time: new Date(message.createdAt).toLocaleTimeString(),
+						type: message.userId === userId ? "sent" : "recieved",
+					})
+				);
+				setMessages(formattedMessages); // Set all at once instead of incrementally
 			}
 		};
-		setSocket(socket_connection);
 
-		return () => {
-			socket_connection.close();
-		};
-	}, []);
+		fetch_messages();
+	}, [userId]); // Add userId as dependency
 
 	const sendMessage = () => {
 		const message: msgTosendSchema = {
 			content: input,
-			userId: localStorage.getItem("clientId") || "",
+			userId: userId || "",
 		};
 
 		socket?.send(JSON.stringify(message));

@@ -1,22 +1,18 @@
 {
 	"name": "backend",
-	"version": "1.0.0",
-	"main": "index.js",
+	"version": "1.0.50",
 	"scripts": {
 		"test": "echo \"Error: no test specified\" && exit 1",
-		"dev": "nodemon.cmd src/index.ts"
+		"dev": "bun run --watch src/index.ts"
 	},
-	"keywords": [],
-	"author": "",
-	"license": "ISC",
-	"description": "",
 	"dependencies": {
-		"@prisma/client": "^6.1.0",
-		"@types/cors": "^2.8.17",
-		"@types/express": "^5.0.0",
-		"cors": "^2.8.5",
-		"dotenv": "^16.4.7",
-		"express": "^4.21.2",
-		"prisma": "^6.1.0"
-	}
+		"@elysiajs/cors": "^1.2.0",
+		"@prisma/client": "^6.5.0",
+		"elysia": "latest"
+	},
+	"devDependencies": {
+		"bun-types": "latest",
+		"prisma": "^6.5.0"
+	},
+	"module": "src/index.js"
 }
